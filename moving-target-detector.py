@@ -1,5 +1,4 @@
 import numpy as np
-import pywt
 from scipy.signal import firwin
 import matplotlib.pyplot as plt
 
