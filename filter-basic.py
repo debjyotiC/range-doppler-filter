@@ -5,8 +5,7 @@ from scipy.stats import kurtosis, skew
 import pywt
 import pandas as pd
 
-
-data_path = "data/umbc_indoor.npz"
+data_path = "data/range_doppler_home_data.npz"
 
 range_doppler_labels = np.load(data_path, allow_pickle=True)
 range_doppler, labels = range_doppler_labels["out_x"], range_doppler_labels["out_y"]
@@ -46,32 +45,57 @@ def pulse_doppler_filter(radar_data):
     return filtered_data
 
 
+def create_peak_matrix(matrix, threshold):
+    peak_matrix = np.zeros_like(matrix)
+
+    rows, cols = matrix.shape
+
+    for i in range(1, rows - 1):
+        for j in range(1, cols - 1):
+            current_value = matrix[i, j]
+            neighbors = [
+                matrix[i - 1, j],  # top
+                matrix[i + 1, j],  # bottom
+                matrix[i, j - 1],  # left
+                matrix[i, j + 1]  # right
+            ]
+
+            if current_value >= np.max(neighbors) and current_value >= threshold:
+                peak_matrix[i, j] = 1
+
+    return peak_matrix
+
+
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
-k_value = []
-s_value = []
+avg_value = []
+
+matrix = np.ones((16, 128))
+matrix[8] = 0
 
 for count, frame in enumerate(range_doppler):
     plt.cla()
 
     frame = wavelet_denoising(frame, wavelet='haar', value=0.4)
     filtered_frame = pulse_doppler_filter(frame)
+    peaks = create_peak_matrix(filtered_frame, threshold=0.9) * matrix
 
-    kurt_value = kurtosis(filtered_frame.flatten())
-    skew_value = skew(filtered_frame.flatten())
+    kurt_value = kurtosis(peaks.flatten())
+    skew_value = skew(peaks.flatten())
+    avg = peaks.mean()
 
-    print(f"Kurt: {kurt_value} and Skew: {skew_value} for {labels[count]}")
+    print(avg, labels[count])
+
     plt.title(f"{labels[count]}")
 
-    k_value.append(kurt_value)
-    s_value.append(skew_value)
+    avg_value.append(kurt_value)
 
     x = np.arange(frame.shape[1])
     y = np.arange(frame.shape[0])
     X, Y = np.meshgrid(x, y)
 
-    ax.plot_surface(X, Y, filtered_frame, cmap='viridis')
+    ax.plot_surface(X, Y, peaks, cmap='viridis')
     ax.set_xlabel('Range')
     ax.set_ylabel('Doppler')
     ax.set_zlabel('PDF')
@@ -79,7 +103,7 @@ for count, frame in enumerate(range_doppler):
 
 plt.show()
 
-values = {'kurtosis': k_value, 'skew': s_value, 'Ground truth': labels}
-df_w = pd.DataFrame(values, columns=['kurtosis', 'skew', 'Ground truth'])
+values = {'Avg': avg_value, 'Ground truth': labels}
+df_w = pd.DataFrame(values, columns=['Avg', 'Ground truth'])
 csv_path = data_path.split('.')[0].split('/')[1]
 df_w.to_csv(f"{csv_path}.csv", index=False, header=True)
