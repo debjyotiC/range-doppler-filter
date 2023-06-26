@@ -1,0 +1,81 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import firwin
+from scipy.stats import kurtosis, skew
+import pywt
+import pandas as pd
+
+range_doppler_labels = np.load("data/range_doppler_home_data.npz", allow_pickle=True)
+range_doppler, labels = range_doppler_labels["out_x"], range_doppler_labels["out_y"]
+
+
+def wavelet_denoising(data, wavelet='db4', value=0.5):
+    # Perform the wavelet transform.
+    coefficients = pywt.wavedec2(data, wavelet)
+
+    # Threshold the coefficients.
+    threshold = pywt.threshold(coefficients[0], value=value)
+    coefficients[0] = pywt.threshold(coefficients[0], threshold)
+
+    # Inverse wavelet transform.
+    denoised_data = pywt.waverec2(coefficients, wavelet)
+
+    return denoised_data
+
+
+def pulse_doppler_filter(radar_data):
+    # Radar data dimensions: [range_bins, doppler_bins]
+    range_bins, doppler_bins = radar_data.shape
+
+    # Doppler filter length
+    filter_length = 11
+
+    # Generate filter coefficients using FIR filter design
+    filter_coeffs = firwin(filter_length, cutoff=0.3, window='hamming', fs=2.5)
+
+    # Output filtered data
+    filtered_data = np.zeros((range_bins, doppler_bins))
+
+    # Apply the pulse Doppler filter
+    for i in range(doppler_bins):
+        filtered_data[:, i] = np.convolve(radar_data[:, i], filter_coeffs, mode='same')
+
+    return filtered_data
+
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+k_value = []
+s_value = []
+
+for count, frame in enumerate(range_doppler):
+    plt.cla()
+
+    frame = wavelet_denoising(frame, wavelet='haar', value=0.4)
+    filtered_frame = pulse_doppler_filter(frame)
+
+    kurt_value = kurtosis(filtered_frame.flatten())
+    skew_value = skew(filtered_frame.flatten())
+
+    print(f"Kurt: {kurt_value} and Skew: {skew_value} for {labels[count]}")
+    plt.title(f"{labels[count]}")
+
+    k_value.append(kurt_value)
+    s_value.append(skew_value)
+
+    x = np.arange(frame.shape[1])
+    y = np.arange(frame.shape[0])
+    X, Y = np.meshgrid(x, y)
+
+    ax.plot_surface(X, Y, filtered_frame, cmap='viridis')
+    ax.set_xlabel('Range')
+    ax.set_ylabel('Doppler')
+    ax.set_zlabel('PDF')
+    plt.pause(0.1)
+
+plt.show()
+
+values = {'kurtosis': k_value, 'skew': s_value, 'Ground truth': labels}
+df_w = pd.DataFrame(values, columns=['kurtosis', 'skew', 'Ground truth'])
+df_w.to_csv("data-gen.csv", index=False, header=True)

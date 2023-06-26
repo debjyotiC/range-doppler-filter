@@ -1,9 +1,24 @@
 import numpy as np
+import pywt
 from scipy.signal import firwin
 import matplotlib.pyplot as plt
 
 range_doppler_labels = np.load("data/range_doppler_home_data.npz", allow_pickle=True)
 range_doppler, labels = range_doppler_labels["out_x"], range_doppler_labels["out_y"]
+
+
+def wavelet_denoising(data, wavelet='db4', value=0.5):
+    # Perform the wavelet transform.
+    coefficients = pywt.wavedec2(data, wavelet)
+
+    # Threshold the coefficients.
+    threshold = pywt.threshold(coefficients[0], value=value)
+    coefficients[0] = pywt.threshold(coefficients[0], threshold)
+
+    # Inverse wavelet transform.
+    denoised_data = pywt.waverec2(coefficients, wavelet)
+
+    return denoised_data
 
 
 def pulse_doppler_filter(radar_data):
@@ -12,9 +27,6 @@ def pulse_doppler_filter(radar_data):
 
     # Doppler filter length
     filter_length = 11
-
-    # Desired frequency response
-    desired_response = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
     # Generate filter coefficients using FIR filter design
     filter_coeffs = firwin(filter_length, cutoff=0.2, window='hamming', fs=1.0)
@@ -67,18 +79,22 @@ def zero_velocity_filter(data):
 
 
 fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
 for count, frame in enumerate(range_doppler):
-    plt.clf()
-    zvf_data = zero_velocity_filter(frame)
-
-    window_size = 5  # Size of the window for clutter power estimation
-    threshold_factor = 1  # Factor to multiply with clutter standard deviation for threshold computation
-
-    # Compute threshold value using the function
-    threshold = generate_threshold(zvf_data, window_size, threshold_factor)
+    plt.cla()
+    denoise_frame = wavelet_denoising(frame)
     pdf_data = pulse_doppler_filter(frame)
 
-    cs = plt.contourf(pdf_data)
-    fig.colorbar(cs, shrink=0.9)
-    fig.canvas.draw()
-    plt.pause(.1)
+    x = np.arange(pdf_data.shape[1])
+    y = np.arange(pdf_data.shape[0])
+    X, Y = np.meshgrid(x, y)
+
+    ax.plot_surface(X, Y, pdf_data, cmap='viridis')
+    ax.set_xlabel('Range')
+    ax.set_ylabel('Doppler')
+    ax.set_zlabel('PDF')
+
+    plt.pause(0.1)
+
+plt.show()
