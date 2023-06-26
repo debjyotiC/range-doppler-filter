@@ -5,7 +5,7 @@ from scipy.stats import kurtosis, skew
 import pywt
 import pandas as pd
 
-data_path = "data/range_doppler_home_data.npz"
+data_path = "data/range_doppler_home_data.npz" # change with desired NPZ file
 
 range_doppler_labels = np.load(data_path, allow_pickle=True)
 range_doppler, labels = range_doppler_labels["out_x"], range_doppler_labels["out_y"]
