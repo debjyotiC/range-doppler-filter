@@ -5,7 +5,10 @@ from scipy.stats import kurtosis, skew
 import pywt
 import pandas as pd
 
-range_doppler_labels = np.load("data/range_doppler_home_data.npz", allow_pickle=True)
+
+data_path = "data/umbc_indoor.npz"
+
+range_doppler_labels = np.load(data_path, allow_pickle=True)
 range_doppler, labels = range_doppler_labels["out_x"], range_doppler_labels["out_y"]
 
 
@@ -78,4 +81,5 @@ plt.show()
 
 values = {'kurtosis': k_value, 'skew': s_value, 'Ground truth': labels}
 df_w = pd.DataFrame(values, columns=['kurtosis', 'skew', 'Ground truth'])
-df_w.to_csv("data-gen.csv", index=False, header=True)
+csv_path = data_path.split('.')[0].split('/')[1]
+df_w.to_csv(f"{csv_path}.csv", index=False, header=True)
