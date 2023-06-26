@@ -5,10 +5,14 @@ from scipy.stats import kurtosis, skew
 import pywt
 import pandas as pd
 
-data_path = "data/range_doppler_home_data.npz" # change with desired NPZ file
+data_path = "data/umbc_indoor.npz"  # change with desired NPZ file
 
 range_doppler_labels = np.load(data_path, allow_pickle=True)
 range_doppler, labels = range_doppler_labels["out_x"], range_doppler_labels["out_y"]
+
+configParameters = {'numDopplerBins': 16, 'numRangeBins': 256, 'rangeResolutionMeters': 0.146484375,
+                    'rangeIdxToMeters': 0.146484375, 'dopplerResolutionMps': 0.1252347734553042, 'maxRange': 33.75,
+                    'maxVelocity': 1.0018781876424336}
 
 
 def wavelet_denoising(data, wavelet='db4', value=0.5):
@@ -71,7 +75,7 @@ ax = fig.add_subplot(111, projection='3d')
 
 avg_value = []
 
-matrix = np.ones((16, 128))
+matrix = np.ones((configParameters["numDopplerBins"], configParameters["numRangeBins"]))
 matrix[8] = 0
 
 for count, frame in enumerate(range_doppler):
@@ -81,19 +85,20 @@ for count, frame in enumerate(range_doppler):
     filtered_frame = pulse_doppler_filter(frame)
     peaks = create_peak_matrix(filtered_frame, threshold=0.9) * matrix
 
-    kurt_value = kurtosis(peaks.flatten())
-    skew_value = skew(peaks.flatten())
     avg = peaks.mean()
 
-    print(avg, labels[count])
+    print(f"Got avg. {avg} for ground truth {labels[count]}")
 
     plt.title(f"{labels[count]}")
 
-    avg_value.append(kurt_value)
+    avg_value.append(avg)
 
-    x = np.arange(frame.shape[1])
-    y = np.arange(frame.shape[0])
-    X, Y = np.meshgrid(x, y)
+    rangeArray = np.array(range(configParameters["numRangeBins"])) * configParameters["rangeIdxToMeters"]
+    dopplerArray = np.multiply(
+        np.arange(-configParameters["numDopplerBins"] / 2, configParameters["numDopplerBins"] / 2),
+        configParameters["dopplerResolutionMps"])
+
+    X, Y = np.meshgrid(rangeArray, dopplerArray)
 
     ax.plot_surface(X, Y, peaks, cmap='viridis')
     ax.set_xlabel('Range')
@@ -101,9 +106,9 @@ for count, frame in enumerate(range_doppler):
     ax.set_zlabel('PDF')
     plt.pause(0.1)
 
-plt.show()
+
 
 values = {'Avg': avg_value, 'Ground truth': labels}
 df_w = pd.DataFrame(values, columns=['Avg', 'Ground truth'])
 csv_path = data_path.split('.')[0].split('/')[1]
-df_w.to_csv(f"{csv_path}.csv", index=False, header=True)
+df_w.to_csv(f"generated_csv/{csv_path}.csv", index=False, header=True)
