@@ -106,8 +106,6 @@ for count, frame in enumerate(range_doppler):
     ax.set_zlabel('PDF')
     plt.pause(0.1)
 
-
-
 values = {'Avg': avg_value, 'Ground truth': labels}
 df_w = pd.DataFrame(values, columns=['Avg', 'Ground truth'])
 csv_path = data_path.split('.')[0].split('/')[1]
