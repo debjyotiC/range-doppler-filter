@@ -90,7 +90,7 @@ def highlight_peaks(matrix, threshold):
 
 
 def classifier_func(rangeArray, range_doppler):
-    mask = np.ones((configParameters["numDopplerBins"], configParameters["numRangeBins"]))
+    mask = np.ones((16, 256))
     mask[8] = 0  # make central frequencies zero
 
     range_doppler_denoised = wavelet_denoising(range_doppler, wavelet='haar', value=0.7)
