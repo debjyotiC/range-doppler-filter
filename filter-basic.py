@@ -86,8 +86,9 @@ for count, frame in enumerate(range_doppler):
     peaks = create_peak_matrix(filtered_frame, threshold=0.9) * mask
     peaks_matrix.append(peaks)
     avg = np.average(peaks)
+    classification = "human_present" if avg > 0 else "no_human_present"
 
-    print(f"Got avg. {avg} for ground truth {labels[count]}")
+    print(f"Got avg. {avg} for {classification} ground truth {labels[count]}")
 
     plt.title(f"{labels[count]}")
 
@@ -111,4 +112,4 @@ df_w = pd.DataFrame(values, columns=['Avg', 'Ground truth'])
 csv_path = data_path.split('.')[0].split('/')[1]
 df_w.to_csv(f"generated_csv/{csv_path}.csv", index=False, header=True)
 
-np.savez("old/data.npz", out_x=np.array(peaks_matrix), out_y=labels)
+np.savez("data.npz", out_x=np.array(peaks_matrix), out_y=labels)
