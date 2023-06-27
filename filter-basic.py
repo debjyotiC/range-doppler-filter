@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import firwin
-from scipy.stats import skew
 import pywt
 import pandas as pd
 
@@ -112,4 +111,4 @@ df_w = pd.DataFrame(values, columns=['Avg', 'Ground truth'])
 csv_path = data_path.split('.')[0].split('/')[1]
 df_w.to_csv(f"generated_csv/{csv_path}.csv", index=False, header=True)
 
-np.savez("data.npz", out_x=np.array(peaks_matrix), out_y=labels)
+np.savez("old/data.npz", out_x=np.array(peaks_matrix), out_y=labels)
