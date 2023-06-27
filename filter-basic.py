@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import firwin
-from scipy.stats import kurtosis, skew
+from scipy.stats import skew
 import pywt
 import pandas as pd
 
-data_path = "data/umbc_indoor.npz"  # change with desired NPZ file
+data_path = "data/umbc_new_2.npz"  # change with desired NPZ file
 
 range_doppler_labels = np.load(data_path, allow_pickle=True)
 range_doppler, labels = range_doppler_labels["out_x"], range_doppler_labels["out_y"]
@@ -37,7 +37,7 @@ def pulse_doppler_filter(radar_data):
     filter_length = 11
 
     # Generate filter coefficients using FIR filter design
-    filter_coeffs = firwin(filter_length, cutoff=0.3, window='hamming', fs=2.5)
+    filter_coeffs = firwin(filter_length, cutoff=0.2, window='hamming', fs=4.5)
 
     # Output filtered data
     filtered_data = np.zeros((range_bins, doppler_bins))
@@ -74,18 +74,19 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
 avg_value = []
+peaks_matrix = []
 
-matrix = np.ones((configParameters["numDopplerBins"], configParameters["numRangeBins"]))
-matrix[8] = 0
+mask = np.ones((configParameters["numDopplerBins"], configParameters["numRangeBins"]))
+mask[8] = 0  # make central frequencies zero
 
 for count, frame in enumerate(range_doppler):
     plt.cla()
 
-    frame = wavelet_denoising(frame, wavelet='haar', value=0.4)
+    frame = wavelet_denoising(frame, wavelet='haar', value=0.7)
     filtered_frame = pulse_doppler_filter(frame)
-    peaks = create_peak_matrix(filtered_frame, threshold=0.9) * matrix
-
-    avg = peaks.mean()
+    peaks = create_peak_matrix(filtered_frame, threshold=0.9) * mask
+    peaks_matrix.append(peaks)
+    avg = np.average(peaks)
 
     print(f"Got avg. {avg} for ground truth {labels[count]}")
 
@@ -110,3 +111,5 @@ values = {'Avg': avg_value, 'Ground truth': labels}
 df_w = pd.DataFrame(values, columns=['Avg', 'Ground truth'])
 csv_path = data_path.split('.')[0].split('/')[1]
 df_w.to_csv(f"generated_csv/{csv_path}.csv", index=False, header=True)
+
+np.savez("data.npz", out_x=np.array(peaks_matrix), out_y=labels)
