@@ -69,8 +69,7 @@ def create_peak_matrix(matrix, threshold):
     return peak_matrix
 
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
+
 
 avg_value = []
 peaks_matrix = []
@@ -93,40 +92,46 @@ dopplerArray = np.multiply(
         configParameters["dopplerResolutionMps"])
 
 
-for count, frame in enumerate(range_doppler):
-    plt.cla()
 
-    frame = wavelet_denoising(frame, wavelet='haar', value=0.5)
-    filtered_frame = pulse_doppler_filter(frame)
-    peaks = create_peak_matrix(filtered_frame, threshold=0.9) * mask
-    peaks_matrix.append(peaks)
-
-    avg = np.std(peaks)
-
-    classification = "human_present" if avg > 0 else "no_human_present"
-
-    print(f"Got avg. {avg} for {classification} ground truth {labels[count]}")
-
-    plt.title(f"{labels[count]}")
-
-    avg_value.append(avg)
-
-    rangeArray = np.array(range(configParameters["numRangeBins"])) * configParameters["rangeIdxToMeters"]
-    dopplerArray = np.multiply(
-        np.arange(-configParameters["numDopplerBins"] / 2, configParameters["numDopplerBins"] / 2),
-        configParameters["dopplerResolutionMps"])
-
-    X, Y = np.meshgrid(rangeArray, dopplerArray)
-
-    ax.plot_surface(X, Y, peaks, cmap='viridis')
-    ax.set_xlabel('Range (m)')
-    ax.set_ylabel('Doppler (m/s)')
-    ax.set_zlabel('PDF')
-    plt.pause(5)
-
-# values = {'Avg': avg_value, 'Ground truth': labels}
-# df_w = pd.DataFrame(values, columns=['Avg', 'Ground truth'])
-# csv_path = data_path.split('.')[0].split('/')[1]
-# df_w.to_csv(f"generated_csv/{csv_path}.csv", index=False, header=True)
+# for count, frame in enumerate(range_doppler):
+#     plt.cla()
 #
-# np.savez("data.npz", out_x=np.array(peaks_matrix), out_y=labels)
+#     frame = wavelet_denoising(frame, wavelet='haar', value=0.5)
+#     filtered_frame = pulse_doppler_filter(frame)
+#     peaks = create_peak_matrix(filtered_frame, threshold=0.9)
+#     peaks_matrix.append(peaks)
+#
+#     avg = np.std(peaks)
+#
+#     classification = "human_present" if avg > 0 else "no_human_present"
+#
+#     print(f"Got avg. {avg} for {classification} ground truth {labels[count]}")
+#
+#     plt.title(f"{labels[count]}")
+#
+#     avg_value.append(avg)
+#
+#     rangeArray = np.array(range(configParameters["numRangeBins"])) * configParameters["rangeIdxToMeters"]
+#     dopplerArray = np.multiply(
+#         np.arange(-configParameters["numDopplerBins"] / 2, configParameters["numDopplerBins"] / 2),
+#         configParameters["dopplerResolutionMps"])
+#
+#     X, Y = np.meshgrid(rangeArray, dopplerArray)
+#
+#     ax.plot_surface(X, Y, peaks, cmap='viridis')
+#     ax.set_xlabel('Range (m)', labelpad=10, fontsize=14, fontweight='bold')
+#     ax.set_ylabel('Doppler (m/s)', labelpad=10, fontsize=14, fontweight='bold')
+#     ax.set_zlabel('PDF', labelpad=10, fontsize=14, fontweight='bold')
+#     plt.pause(5)
+
+fig = plt.figure(dpi=600)
+ax = fig.add_subplot(111, projection='3d')
+
+
+X, Y = np.meshgrid(rangeArray, dopplerArray)
+
+ax.plot_surface(X, Y, peaks, cmap='viridis')
+ax.set_xlabel('Range (m)', labelpad=10, fontsize=14, fontweight='bold')
+ax.set_ylabel('Doppler (m/s)', labelpad=10, fontsize=14, fontweight='bold')
+ax.set_zlabel('PDF', labelpad=10, fontsize=14, fontweight='bold')
+plt.show()
