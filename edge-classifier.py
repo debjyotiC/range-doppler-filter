@@ -99,7 +99,7 @@ def classifier_func(rangeArray, range_doppler):
 
     avg = np.average(peaks)
 
-    predicted_class = "human_present" if avg > 0 else "no_human_present"
+    predicted_class = "human_present" if avg > 0.3 else "no_human_present"
 
     highlighted_peaks = highlight_peaks(range_doppler, threshold=70.0)
     highlighted_peaks_array = np.array(highlighted_peaks)

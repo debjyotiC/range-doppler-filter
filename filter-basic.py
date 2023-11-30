@@ -36,7 +36,7 @@ def pulse_doppler_filter(radar_data):
     filter_length = 11
 
     # Generate filter coefficients using FIR filter design
-    filter_coeffs = firwin(filter_length, cutoff=0.2, window='hamming', fs=4.5)
+    filter_coeffs = firwin(filter_length, cutoff=0.3, window='hamming', fs=2.5)
 
     # Output filtered data
     filtered_data = np.zeros((range_bins, doppler_bins))
@@ -78,14 +78,31 @@ peaks_matrix = []
 mask = np.ones((configParameters["numDopplerBins"], configParameters["numRangeBins"]))
 mask[8] = 0  # make central frequencies zero
 
+frame = range_doppler[1]
+
+denoised_frame = wavelet_denoising(frame, wavelet='haar', value=0.5)
+filtered_frame = pulse_doppler_filter(denoised_frame)
+
+peaks = create_peak_matrix(filtered_frame, threshold=0.9)
+
+masked_peaks = peaks * mask
+
+rangeArray = np.array(range(configParameters["numRangeBins"])) * configParameters["rangeIdxToMeters"]
+dopplerArray = np.multiply(
+        np.arange(-configParameters["numDopplerBins"] / 2, configParameters["numDopplerBins"] / 2),
+        configParameters["dopplerResolutionMps"])
+
+
 for count, frame in enumerate(range_doppler):
     plt.cla()
 
-    frame = wavelet_denoising(frame, wavelet='haar', value=0.7)
+    frame = wavelet_denoising(frame, wavelet='haar', value=0.5)
     filtered_frame = pulse_doppler_filter(frame)
     peaks = create_peak_matrix(filtered_frame, threshold=0.9) * mask
     peaks_matrix.append(peaks)
-    avg = np.average(peaks)
+
+    avg = np.std(peaks)
+
     classification = "human_present" if avg > 0 else "no_human_present"
 
     print(f"Got avg. {avg} for {classification} ground truth {labels[count]}")
@@ -102,14 +119,14 @@ for count, frame in enumerate(range_doppler):
     X, Y = np.meshgrid(rangeArray, dopplerArray)
 
     ax.plot_surface(X, Y, peaks, cmap='viridis')
-    ax.set_xlabel('Range')
-    ax.set_ylabel('Doppler')
+    ax.set_xlabel('Range (m)')
+    ax.set_ylabel('Doppler (m/s)')
     ax.set_zlabel('PDF')
-    plt.pause(0.1)
+    plt.pause(5)
 
-values = {'Avg': avg_value, 'Ground truth': labels}
-df_w = pd.DataFrame(values, columns=['Avg', 'Ground truth'])
-csv_path = data_path.split('.')[0].split('/')[1]
-df_w.to_csv(f"generated_csv/{csv_path}.csv", index=False, header=True)
-
-np.savez("data.npz", out_x=np.array(peaks_matrix), out_y=labels)
+# values = {'Avg': avg_value, 'Ground truth': labels}
+# df_w = pd.DataFrame(values, columns=['Avg', 'Ground truth'])
+# csv_path = data_path.split('.')[0].split('/')[1]
+# df_w.to_csv(f"generated_csv/{csv_path}.csv", index=False, header=True)
+#
+# np.savez("data.npz", out_x=np.array(peaks_matrix), out_y=labels)
